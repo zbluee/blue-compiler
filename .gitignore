@@ -1,0 +1,9 @@
+# Ignore compiled binaries
+*.out
+*.exe
+
+# Ignore IDE specific files
+.vscode/
+.idea/
+build/
+cmake-build*
