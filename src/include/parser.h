@@ -1,16 +1,41 @@
 #pragma once
 #include <vector>
+#include <variant>
 #include "./token.h"
 
 namespace node
 {
-    struct Expr
+    struct ExprIntLit
     {
         Token int_literal;
     };
-    struct Exit
+    struct ExprIdent
+    {
+        Token ident;
+    };
+    struct Expr
+    {
+        std::variant<node::ExprIntLit, node::ExprIdent> variant;
+    };
+
+    struct StatementExit
     {
         Expr expr;
+    };
+
+    struct StatementLet
+    {
+        Token ident;
+        Expr expr;
+    };
+
+    struct Statement
+    {
+        std::variant<node::StatementExit, node::StatementLet> variant;
+    };
+    struct Prog
+    {
+        std::vector<node::Statement> statements;
     };
 }
 
@@ -20,11 +45,11 @@ private:
     std::vector<Token> m_Tokens;
     mutable size_t m_Count;
 
-    inline std::optional<Token> lookAhead(const int ahead = 1) const
+    inline std::optional<Token> lookAhead(const int ahead = 0) const
     {
-        if (m_Count + ahead > m_Tokens.size())
+        if (m_Count + ahead >= m_Tokens.size())
             return {};
-        return m_Tokens[m_Count];
+        return m_Tokens[m_Count + ahead];
     }
 
     inline Token getNextToken() const
@@ -38,39 +63,96 @@ public:
     std::optional<node::Expr> parseExpr()
     {
         if (lookAhead().has_value() && lookAhead().value().type == TokenTypes::int_literals)
-            return node::Expr{.int_literal = getNextToken()};
+            return node::Expr{.variant = node::ExprIntLit{.int_literal = getNextToken()}};
+        else if (lookAhead().has_value() && lookAhead().value().type == TokenTypes::ident)
+            return node::Expr{.variant = node::ExprIdent{.ident = getNextToken()}};
         return {};
     }
-    std::optional<node::Exit> parse()
+
+    std::optional<node::Statement> parseStatement()
     {
-        std::optional<node::Exit> exit_node;
+        if (lookAhead().value().type == TokenTypes::exit && lookAhead(1).has_value() && lookAhead(1).value().type == TokenTypes::open_parenthesis)
+        {
+            getNextToken();
+            getNextToken();
+
+            node::StatementExit exit_statement;
+            if (auto expr_node = parseExpr())
+            {
+                exit_statement = {.expr = expr_node.value()};
+            }
+            else
+            {
+                std::cerr << "Error : Invalid Expression" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+
+            if (lookAhead().has_value() && lookAhead().value().type == TokenTypes::close_parenthesis)
+            {
+                getNextToken();
+            }
+            else
+            {
+                std::cerr << "Error : Expected `)`" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            if (lookAhead().has_value() && lookAhead().value().type == TokenTypes::semicolon)
+            {
+                getNextToken();
+            }
+            else
+            {
+                std::cerr << "Error : Expected `;`" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            return node::Statement{.variant = exit_statement};
+        }
+        else if (lookAhead().has_value() && lookAhead().value().type == TokenTypes::let &&
+                 lookAhead(1).has_value() && lookAhead(1).value().type == TokenTypes::ident &&
+                 lookAhead(2).has_value() && lookAhead(2).value().type == TokenTypes::eq)
+        {
+            // let statement, consume it
+            getNextToken();
+            auto statementLet = node::StatementLet{.ident = getNextToken()};
+            // equal sign, consume it
+            getNextToken();
+            // and then we have z expr
+            if (auto expr = parseExpr())
+            {
+                statementLet.expr = expr.value();
+            }
+            else
+            {
+                std::cerr << "Error : Invalid Expression" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            if (lookAhead().has_value() && lookAhead().value().type == TokenTypes::semicolon)
+                getNextToken();
+            else
+            {
+                std::cerr << "Error : Exprected `;`" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            return node::Statement{.variant = statementLet};
+        }
+        return {};
+    }
+    std::optional<node::Prog> parseProg()
+    {
+        node::Prog prog;
 
         while (lookAhead().has_value())
         {
-            if (lookAhead().value().type == TokenTypes::exit)
+            if (auto statement = parseStatement())
             {
-                getNextToken();
-                // if expr has value or not null
-                if (auto expr_node = parseExpr())
-                    exit_node = node::Exit{.expr = expr_node.value()};
-
-                else
-                {
-                    std::cerr << "Error : Invalid Expression" << std::endl;
-                    exit(EXIT_FAILURE);
-                }
-
-                if (lookAhead().has_value() && lookAhead().value().type == TokenTypes::semicolon)
-                    getNextToken();
-
-                else
-                {
-                    std::cerr << "Error : Invalid Expression" << std::endl;
-                    exit(EXIT_FAILURE);
-                }
+                prog.statements.push_back(statement.value());
+            }
+            else
+            {
+                std::cerr << "Error : Invalid Statement" << std::endl;
+                exit(EXIT_FAILURE);
             }
         }
-        m_Count = 0;
-        return exit_node;
+        return prog;
     }
 };
