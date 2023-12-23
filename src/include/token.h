@@ -6,7 +6,12 @@ enum class TokenTypes
 {
     int_literals,
     exit,
-    semicolon
+    semicolon,
+    open_parenthesis,
+    close_parenthesis,
+    ident,
+    let,
+    eq
 };
 
 struct Token
