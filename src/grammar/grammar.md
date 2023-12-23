@@ -1,20 +1,25 @@
 ####Grammar \( G = (N, T, P, S) \) is defined as follows:
 
 - **Non-terminals (\( N \)):**
+  - `prog`
+  - `statment`
   - `exit`
   - `expr`
   - `int_literals`
-<br>
+
 - **Terminals (\( T \)):**
   - `0, 1, 2, ..., 9`
-<br>
+
 - **Start Symbol (S):** 
-    - `{exit}`
-<br>
+    - `{prog}`
+
 - **Production Rules (\( P \)):**
 
   ```
-  [exit] ⟶ exit([expr]);
-  [expr] ⟶ int_literals
+  [prog] ⟶ statment*
+  [statment] ⟶  { exit([expr]);
+                { let ident = [expr];
+  [expr] ⟶  { int_literals
+            { ident
   [int_literals] ⟶ 0, 1, 3, ..., 9 
   
