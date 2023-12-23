@@ -2,18 +2,17 @@
 #include <iostream>
 #include <sstream>
 
-
 class Scanner
 {
 private:
     std::string m_Content;
     size_t m_Count;
 
-    inline std::optional<char> lookAhead(const int ahead = 1) const
+    inline std::optional<char> lookAhead(const int ahead = 0) const
     {
-        if (m_Count + ahead > m_Content.length())
+        if (m_Count + ahead >= m_Content.length())
             return {};
-        return m_Content[m_Count];
+        return m_Content[m_Count + ahead];
     }
 
     inline char getNextChar()
@@ -46,10 +45,17 @@ public:
                     buf.clear();
                     continue;
                 }
+                else if (buf == "let")
+                {
+                    tokens.push_back({.type = TokenTypes::let});
+                    buf.clear();
+                    continue;
+                }
                 else
                 {
-                    std::cerr << "Error : Invalid syntax" << std::endl;
-                    exit(EXIT_FAILURE);
+                    tokens.push_back({.type = TokenTypes::ident, .value = buf});
+                    buf.clear();
+                    continue;
                 }
             }
             else if (std::isdigit(lookAhead().value()))
@@ -64,10 +70,28 @@ public:
                 buf.clear();
                 continue;
             }
+            else if (lookAhead().value() == '(')
+            {
+                getNextChar();
+                tokens.push_back({.type = TokenTypes::open_parenthesis});
+                continue;
+            }
+            else if (lookAhead().value() == ')')
+            {
+                getNextChar();
+                tokens.push_back({.type = TokenTypes::close_parenthesis});
+                continue;
+            }
             else if (lookAhead().value() == ';')
             {
                 getNextChar();
                 tokens.push_back({.type = TokenTypes::semicolon});
+                continue;
+            }
+            else if(lookAhead().value() == '=')
+            {
+                getNextChar();
+                tokens.push_back({.type = TokenTypes::eq});
                 continue;
             }
             else if (std::isspace(lookAhead().value()))
