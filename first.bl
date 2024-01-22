@@ -1,3 +1,4 @@
-let var1 = 1;
-let vartwo = var1;
-exit (vartwo);
+let num1 = (17 - 1 * 1 / 1) / 2;
+let num2 = num1 / 4 / 2;
+let num3 = 2;
+exit (num2 + 2);
