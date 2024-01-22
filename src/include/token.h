@@ -1,5 +1,5 @@
 #pragma once
-#include <string>
+
 #include <optional>
 
 enum class TokenTypes
@@ -11,7 +11,11 @@ enum class TokenTypes
     close_parenthesis,
     ident,
     let,
-    eq
+    eq,
+    mul,
+    div,
+    plus,
+    sub,
 };
 
 struct Token
