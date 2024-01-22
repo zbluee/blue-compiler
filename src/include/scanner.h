@@ -1,11 +1,24 @@
 #pragma once
-#include <iostream>
-#include <sstream>
+
+std::optional<int> exprsPrecedence(const TokenTypes& type)
+{
+    switch (type)
+    {
+    case TokenTypes::plus:
+    case TokenTypes::sub:
+        return 0;
+    case TokenTypes::mul:
+    case TokenTypes::div:
+        return 1;
+    default:
+        return {};
+    }
+}
 
 class Scanner
 {
 private:
-    std::string m_Content;
+    const std::string m_Content;
     size_t m_Count;
 
     inline std::optional<char> lookAhead(const int ahead = 0) const
@@ -15,15 +28,15 @@ private:
         return m_Content[m_Count + ahead];
     }
 
-    inline char getNextChar()
+    inline char getNextChar() 
     {
         return m_Content[m_Count++];
     }
 
 public:
-    inline Scanner(const std::string &content) : m_Content(content), m_Count(0) {}
+    inline explicit Scanner(const std::string& content) : m_Content(content), m_Count(0) {}
 
-    std::vector<Token> tokenize()
+    inline std::vector<Token> tokenize()
     {
         std::vector<Token> tokens;
         std::string buf;
@@ -43,19 +56,16 @@ public:
                 {
                     tokens.push_back({.type = TokenTypes::exit});
                     buf.clear();
-                    continue;
                 }
                 else if (buf == "let")
                 {
                     tokens.push_back({.type = TokenTypes::let});
                     buf.clear();
-                    continue;
                 }
                 else
                 {
                     tokens.push_back({.type = TokenTypes::ident, .value = buf});
                     buf.clear();
-                    continue;
                 }
             }
             else if (std::isdigit(lookAhead().value()))
@@ -68,36 +78,50 @@ public:
 
                 tokens.push_back({.type = TokenTypes::int_literals, .value = buf});
                 buf.clear();
-                continue;
             }
             else if (lookAhead().value() == '(')
             {
                 getNextChar();
                 tokens.push_back({.type = TokenTypes::open_parenthesis});
-                continue;
             }
             else if (lookAhead().value() == ')')
             {
                 getNextChar();
                 tokens.push_back({.type = TokenTypes::close_parenthesis});
-                continue;
             }
             else if (lookAhead().value() == ';')
             {
                 getNextChar();
                 tokens.push_back({.type = TokenTypes::semicolon});
-                continue;
             }
-            else if(lookAhead().value() == '=')
+            else if (lookAhead().value() == '=')
             {
                 getNextChar();
                 tokens.push_back({.type = TokenTypes::eq});
-                continue;
+            }
+            else if (lookAhead().value() == '+')
+            {
+                getNextChar();
+                tokens.push_back({.type = TokenTypes::plus});
+            }
+            else if (lookAhead().value() == '*')
+            {
+                getNextChar();
+                tokens.push_back({.type = TokenTypes::mul});
+            }
+            else if (lookAhead().value() == '-')
+            {
+                getNextChar();
+                tokens.push_back({.type = TokenTypes::sub});
+            }
+            else if (lookAhead().value() == '/')
+            {
+                getNextChar();
+                tokens.push_back({.type = TokenTypes::div});
             }
             else if (std::isspace(lookAhead().value()))
             {
                 getNextChar();
-                continue;
             }
             else
             {
