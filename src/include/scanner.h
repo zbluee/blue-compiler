@@ -1,6 +1,6 @@
 #pragma once
 
-std::optional<int> exprsPrecedence(const TokenTypes& type)
+std::optional<int> exprsPrecedence(const TokenTypes &type)
 {
     switch (type)
     {
@@ -28,13 +28,13 @@ private:
         return m_Content[m_Count + ahead];
     }
 
-    inline char getNextChar() 
+    inline char getNextChar()
     {
         return m_Content[m_Count++];
     }
 
 public:
-    inline explicit Scanner(const std::string& content) : m_Content(content), m_Count(0) {}
+    inline explicit Scanner(const std::string &content) : m_Content(content), m_Count(0) {}
 
     inline std::vector<Token> tokenize()
     {
@@ -60,6 +60,11 @@ public:
                 else if (buf == "let")
                 {
                     tokens.push_back({.type = TokenTypes::let});
+                    buf.clear();
+                }
+                else if (buf == "if")
+                {
+                    tokens.push_back({ .type = TokenTypes::_if });
                     buf.clear();
                 }
                 else
@@ -118,6 +123,16 @@ public:
             {
                 getNextChar();
                 tokens.push_back({.type = TokenTypes::div});
+            }
+            else if (lookAhead().value() == '{')
+            {
+                getNextChar();
+                tokens.push_back({.type = TokenTypes::open_curly});
+            }
+            else if (lookAhead().value() == '}')
+            {
+                getNextChar();
+                tokens.push_back({.type = TokenTypes::close_curly});
             }
             else if (std::isspace(lookAhead().value()))
             {

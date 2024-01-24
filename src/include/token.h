@@ -8,7 +8,9 @@ enum class TokenTypes
     exit,
     semicolon,
     open_parenthesis,
+    open_curly,
     close_parenthesis,
+    close_curly,
     ident,
     let,
     eq,
@@ -16,6 +18,7 @@ enum class TokenTypes
     div,
     plus,
     sub,
+    _if
 };
 
 struct Token
