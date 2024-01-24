@@ -2,13 +2,14 @@
 
 - **Non-terminals (\( N \)):**
   - `Prog`
-  - `Statment`
+  - `Statement`
   - `Ident`
   - `letter`
   - `Int_literals`
   - `Expr`
   - `Term`
   - `Exprs`
+  - `Scope`
 
 - **Terminals (\( T \)):**
   - `0, 1, 2, ..., 9`
@@ -23,6 +24,9 @@
   - `/`
   - `(`
   - `)`
+  - `{`
+  - `}`
+  - `if`
 
 - **Start Symbol (S):** 
     - `Prog`
@@ -30,9 +34,11 @@
 - **Production Rules (\( P \)):**
 
   ```
-  <Prog> ⟶ <Statment> | <Prog> <Statment>
+  <Prog> ⟶ <Statement> | <Prog> <Statement>
   
-  <Statment> ⟶  exit(<Expr>); | <let> <Ident> = <Expr>;
+  <Statement> ⟶  exit(<Expr>); | <let> <Ident> = <Expr> | <Scope> | if(<Expr>)<Scope>
+
+  <Scope> ⟶ <Statement> | <Scope> <Statement>
 
   <Ident> ⟶  <letter> | <Ident> <letter> | <Ident> <Int_literals>
 
