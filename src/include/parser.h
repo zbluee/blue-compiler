@@ -69,9 +69,22 @@ namespace node
         Expr *expr;
     };
 
+    struct Statement;
+
+    struct Scope
+    {
+        std::vector<node::Statement *> statements;
+    };
+
+    struct StatementIf
+    {
+        Expr *expr;
+        Scope *scope;
+    };
+
     struct Statement
     {
-        std::variant<node::StatementExit *, node::StatementLet *> variant;
+        std::variant<node::StatementExit *, node::StatementLet *, node::Scope *, node::StatementIf *> variant;
     };
     struct Prog
     {
@@ -168,12 +181,14 @@ public:
         while (true)
         {
             std::optional<Token> currToken = lookAhead();
-            
-            if(!currToken.has_value()) break;
+
+            if (!currToken.has_value())
+                break;
 
             std::optional<int> precedence = exprsPrecedence(currToken->type);
 
-            if(!precedence.has_value() || precedence < minPrecedence) break;
+            if (!precedence.has_value() || precedence < minPrecedence)
+                break;
 
             Token opr = getNextToken();
             int nextMinPrecedence = precedence.value() + 1;
@@ -231,6 +246,18 @@ public:
         return exprLhs;
     }
 
+    std::optional<node::Scope *> parseScope()
+    {
+        if (!trytoGetNextToken(TokenTypes::open_curly).has_value())
+            return {};
+        auto scope = m_ArenaAllocator.allocate<node::Scope>();
+        while (auto statement = parseStatement())
+            scope->statements.push_back(statement.value());
+
+        trytoGetNextToken(TokenTypes::close_curly, "Error : Expected `}`");
+        return scope;
+    }
+
     std::optional<node::Statement *> parseStatement()
     {
         if (lookAhead().value().type == TokenTypes::exit && lookAhead(1).has_value() && lookAhead(1).value().type == TokenTypes::open_parenthesis)
@@ -280,6 +307,48 @@ public:
             statement->variant = statementLet;
             return statement;
         }
+        else if (lookAhead().has_value() && lookAhead().value().type == TokenTypes::open_curly)
+        {
+            if (auto scope = parseScope())
+            {
+                auto statement = m_ArenaAllocator.allocate<node::Statement>();
+                statement->variant = scope.value();
+                return statement;
+            }
+            else
+            {
+                std::cerr << "Error : Invalid Scope" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if (auto _if = trytoGetNextToken(TokenTypes::_if))
+        {
+            trytoGetNextToken(TokenTypes::open_parenthesis, "Error : Expected '('");
+            auto statementIf = m_ArenaAllocator.allocate<node::StatementIf>();
+            if (auto expr = parseExpr())
+            {
+                statementIf->expr = expr.value();
+            }
+            else
+            {
+                std::cerr << "Error : Invalid Expression" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+
+            trytoGetNextToken(TokenTypes::close_parenthesis, "Error : Expected ')'");
+            if (auto scope = parseScope())
+            {
+                statementIf->scope = scope.value();
+            }
+            else
+            {
+                std::cerr << "Error : Invalid Scope" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            auto statement = m_ArenaAllocator.allocate<node::Statement>();
+            statement->variant = statementIf;
+            return statement;
+        }
         else
         {
             return {};
@@ -293,7 +362,7 @@ public:
         {
             if (auto statement = parseStatement())
                 prog.statements.push_back(statement.value());
-            
+
             else
             {
                 std::cerr << "Error : Invalid Statement" << std::endl;
