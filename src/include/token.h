@@ -18,7 +18,9 @@ enum class TokenTypes
     div,
     plus,
     sub,
-    _if
+    _if,
+    elif,
+    _else
 };
 
 struct Token
