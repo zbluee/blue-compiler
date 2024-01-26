@@ -38,12 +38,12 @@ private:
 
     void endScope()
     {
-        size_t popCount = m_Variables.size() - m_Scopes.back();
+        const size_t popCount = m_Variables.size() - m_Scopes.back();
         // each of the variable is a 8 bytes b/c we r using 64 bit int and since the stack grows downward in memory by increasing the value of rsp, moving the sp upward in memory, which has the effect of "popping" elements off the stack.
         m_Output << "    ADD rsp, " << popCount * 8 << "\n";
         m_StackPtr -= popCount;
 
-        for (int i = 0; i < popCount; i++)
+        for (size_t i = 0; i < popCount; i++)
             m_Variables.pop_back();
 
         m_Scopes.pop_back();
@@ -70,8 +70,8 @@ public:
             }
             void operator()(const node::TermIdent *termIdent) const
             {
-                auto itr = std::find_if(generator.m_Variables.cbegin(), generator.m_Variables.cend(), [&](const Variable &var)
-                                        { return var.name == termIdent->ident.value.value(); });
+                const auto itr = std::find_if(generator.m_Variables.cbegin(), generator.m_Variables.cend(), [&](const Variable &var)
+                                              { return var.name == termIdent->ident.value.value(); });
                 // extracting out the value of the varialbe and we need to put copy of it on top of the stack
                 // first check if the variable is declared
                 if (itr == generator.m_Variables.cend())
@@ -175,6 +175,40 @@ public:
         endScope();
     }
 
+    void genConditionalBr(const node::ConditionalBranch *conditionalBr, const std::string &endLabel)
+    {
+
+        struct ConditionalBranchVisitor
+        {
+            CodeGenerator &generator;
+            const std::string &endLabel;
+
+            void operator()(const node::ConditionalBranchElif *conditionalBrElif) const
+            {
+                generator.genExpr(conditionalBrElif->expr);
+                generator.pop("rax");
+                const std::string label = generator.createLabel();
+                generator.m_Output << "    TEST rax, rax\n";
+                generator.m_Output << "    JZ " << label << "\n";
+                generator.genScope(conditionalBrElif->scope);
+                // as soon as one of the elif statement is true, jump the rest
+                generator.m_Output << "    JMP " << endLabel << "\n";
+
+                if (conditionalBrElif->conditionalBr.has_value())
+                {
+                    generator.m_Output << label << ":\n";
+                    generator.genConditionalBr(conditionalBrElif->conditionalBr.value(), endLabel);
+                }
+            }
+            void operator()(const node::ConditionalBranchElse *conditionalBrElse) const
+            {
+                generator.genScope(conditionalBrElse->scope);
+            }
+        };
+
+        ConditionalBranchVisitor visitor{.generator = *this, .endLabel = endLabel};
+        std::visit(visitor, conditionalBr->variant);
+    }
     void genStatement(const node::Statement *statement)
     {
         struct StatementVisitor
@@ -189,8 +223,8 @@ public:
             }
             void operator()(const node::StatementLet *statementLet) const
             {
-                auto it = std::find_if(generator.m_Variables.cbegin(), generator.m_Variables.cend(), [&](const Variable &var)
-                                       { return var.name == statementLet->ident.value.value(); });
+                const auto it = std::find_if(generator.m_Variables.cbegin(), generator.m_Variables.cend(), [&](const Variable &var)
+                                             { return var.name == statementLet->ident.value.value(); });
                 // encounter with let statement, first need to check to make sure that there is not a variable declared with that name
                 if (it != generator.m_Variables.cend())
                 {
@@ -212,11 +246,18 @@ public:
                 // evaluate the expression first
                 generator.genExpr(statementIf->expr); // this will put the result of the expression at the stuck top
                 generator.pop("rax");                 // pop back in to the rax, if it's 0 jump, else go to the label
-                std::string label = generator.createLabel();
+                const std::string label = generator.createLabel();
                 generator.m_Output << "    TEST rax, rax\n";
-                generator.m_Output << "    Jz " << label << "\n";
+                generator.m_Output << "    JZ " << label << "\n";
                 generator.genScope(statementIf->scope);
                 generator.m_Output << label << ":\n";
+
+                if (statementIf->conditionalBr.has_value())
+                {
+                    const std::string endLabel = generator.createLabel();
+                    generator.genConditionalBr(statementIf->conditionalBr.value(), endLabel);
+                    generator.m_Output << endLabel << ":\n";
+                }
             }
         };
 
