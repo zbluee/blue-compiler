@@ -1,6 +1,6 @@
 #pragma once
 
-std::optional<int> exprsPrecedence(const TokenTypes &type)
+inline std::optional<int> exprsPrecedence(const TokenTypes &type)
 {
     switch (type)
     {
@@ -21,7 +21,7 @@ private:
     const std::string m_Content;
     size_t m_Count;
 
-    inline std::optional<char> lookAhead(const int ahead = 0) const
+    inline std::optional<char> lookAhead(const size_t ahead = 0) const
     {
         if (m_Count + ahead >= m_Content.length())
             return {};
@@ -64,7 +64,17 @@ public:
                 }
                 else if (buf == "if")
                 {
-                    tokens.push_back({ .type = TokenTypes::_if });
+                    tokens.push_back({.type = TokenTypes::_if});
+                    buf.clear();
+                }
+                else if (buf == "elif")
+                {
+                    tokens.push_back({.type = TokenTypes::elif});
+                    buf.clear();
+                }
+                else if (buf == "else")
+                {
+                    tokens.push_back({.type = TokenTypes::_else});
                     buf.clear();
                 }
                 else
@@ -83,6 +93,30 @@ public:
 
                 tokens.push_back({.type = TokenTypes::int_literals, .value = buf});
                 buf.clear();
+            }
+            else if (lookAhead().value() == '-' && lookAhead(1).has_value() && lookAhead(1).value() == '-')
+            {
+                getNextChar();
+                getNextChar();
+                while (lookAhead().has_value() && lookAhead().value() != '\n')
+                    getNextChar();
+            }
+            else if (lookAhead().value() == '-' && lookAhead(1).has_value() && lookAhead(1).value() == '#')
+            {
+                getNextChar();
+                getNextChar();
+                while (lookAhead().has_value())
+                {
+                    if (lookAhead().value() == '#' && lookAhead(1).has_value() && lookAhead(1).value() == '-')
+                        break;
+                    getNextChar();
+                }
+
+                if (lookAhead().has_value())
+                    getNextChar();
+
+                if (lookAhead().has_value())
+                    getNextChar();
             }
             else if (lookAhead().value() == '(')
             {
