@@ -66,7 +66,7 @@ namespace node
     struct StatementLet
     {
         Token ident;
-        Expr *expr;
+        Expr *expr{};
     };
 
     struct Statement;
@@ -76,10 +76,30 @@ namespace node
         std::vector<node::Statement *> statements;
     };
 
+    struct ConditionalBranch;
+
+    struct ConditionalBranchElif
+    {
+        Expr *expr{};
+        Scope *scope{};
+        std::optional<node::ConditionalBranch *> conditionalBr;
+    };
+
+    struct ConditionalBranchElse
+    {
+        Scope *scope;
+    };
+
+    struct ConditionalBranch
+    {
+        std::variant<node::ConditionalBranchElif *, node::ConditionalBranchElse *> variant;
+    };
+
     struct StatementIf
     {
-        Expr *expr;
-        Scope *scope;
+        Expr *expr{};
+        Scope *scope{};
+        std::optional<node::ConditionalBranch *> conditionalBr;
     };
 
     struct Statement
@@ -99,7 +119,7 @@ private:
     mutable size_t m_Count;
     ArenaAllocator m_ArenaAllocator;
 
-    inline std::optional<Token> lookAhead(int ahead = 0) const
+    inline std::optional<Token> lookAhead(const size_t ahead = 0) const
     {
         if (m_Count + ahead >= m_Tokens.size())
             return {};
@@ -111,7 +131,7 @@ private:
         return m_Tokens.at(m_Count++);
     }
 
-    inline Token trytoGetNextToken(TokenTypes type, const std::string &errMsg) const
+    inline Token trytoGetNextToken(const TokenTypes type, const std::string &errMsg) const
     {
         if (lookAhead().has_value() && lookAhead().value().type == type)
             return getNextToken();
@@ -122,7 +142,7 @@ private:
         }
     }
 
-    inline std::optional<Token> trytoGetNextToken(TokenTypes type) const
+    inline std::optional<Token> trytoGetNextToken(const TokenTypes type) const
     {
         if (lookAhead().has_value() && lookAhead().value().type == type)
             return getNextToken();
@@ -143,7 +163,7 @@ public:
             term->variant = termIntLit;
             return term;
         }
-        else if (auto ident = trytoGetNextToken(TokenTypes::ident))
+        if (auto ident = trytoGetNextToken(TokenTypes::ident))
         {
             auto exprIdent = m_ArenaAllocator.allocate<node::TermIdent>();
             exprIdent->ident = ident.value();
@@ -151,7 +171,7 @@ public:
             term->variant = exprIdent;
             return term;
         }
-        else if (auto openParenthesis = trytoGetNextToken(TokenTypes::open_parenthesis))
+        if (auto openParenthesis = trytoGetNextToken(TokenTypes::open_parenthesis))
         {
             auto expr = parseExpr();
             if (!expr.has_value())
@@ -169,7 +189,7 @@ public:
         return {};
     }
 
-    std::optional<node::Expr *> parseExpr(int minPrecedence = 0)
+    std::optional<node::Expr *> parseExpr(const int minPrecedence = 0)
     {
         std::optional<node::Term *> termLhs = parseTerm();
         if (!termLhs.has_value())
@@ -190,8 +210,8 @@ public:
             if (!precedence.has_value() || precedence < minPrecedence)
                 break;
 
-            Token opr = getNextToken();
-            int nextMinPrecedence = precedence.value() + 1;
+            const Token opr = getNextToken();
+            const int nextMinPrecedence = precedence.value() + 1;
             auto exprRhs = parseExpr(nextMinPrecedence);
 
             if (!exprRhs.has_value())
@@ -246,6 +266,55 @@ public:
         return exprLhs;
     }
 
+    std::optional<node::ConditionalBranch *> parseConditionalBr()
+    {
+        if (trytoGetNextToken(TokenTypes::elif))
+        {
+            trytoGetNextToken(TokenTypes::open_parenthesis, "Error : Expected `(`");
+            const auto conditionalBrElif = m_ArenaAllocator.allocate<node::ConditionalBranchElif>();
+            if (const auto expr = parseExpr())
+            {
+                conditionalBrElif->expr = expr.value();
+            }
+            else
+            {
+                std::cerr << "Error : Expected Expression" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            trytoGetNextToken(TokenTypes::close_parenthesis, "Error : Expected `)`");
+            if (const auto scope = parseScope())
+            {
+                conditionalBrElif->scope = scope.value();
+            }
+            else
+            {
+                std::cerr << "Error : Expected Scope" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            conditionalBrElif->conditionalBr = parseConditionalBr();
+            auto conditionalBr = m_ArenaAllocator.allocate<node::ConditionalBranch>();
+            conditionalBr->variant = conditionalBrElif;
+            return conditionalBr;
+        }
+        if (trytoGetNextToken(TokenTypes::_else))
+        {
+            auto conditionalBrElse = m_ArenaAllocator.allocate<node::ConditionalBranchElse>();
+            if (const auto scope = parseScope())
+            {
+                conditionalBrElse->scope = scope.value();
+            }
+            else
+            {
+                std::cerr << "Error : Expected Scope" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            auto conditionalBr = m_ArenaAllocator.allocate<node::ConditionalBranch>();
+            conditionalBr->variant = conditionalBrElse;
+            return conditionalBr;
+        }
+        return {};
+    }
+
     std::optional<node::Scope *> parseScope()
     {
         if (!trytoGetNextToken(TokenTypes::open_curly).has_value())
@@ -267,7 +336,7 @@ public:
 
             auto exit_statement = m_ArenaAllocator.allocate<node::StatementExit>();
 
-            if (auto expr_node = parseExpr())
+            if (const auto expr_node = parseExpr())
             {
                 exit_statement->expr = expr_node.value();
             }
@@ -282,9 +351,9 @@ public:
             statement->variant = exit_statement;
             return statement;
         }
-        else if (lookAhead().has_value() && lookAhead().value().type == TokenTypes::let &&
-                 lookAhead(1).has_value() && lookAhead(1).value().type == TokenTypes::ident &&
-                 lookAhead(2).has_value() && lookAhead(2).value().type == TokenTypes::eq)
+        if (lookAhead().has_value() && lookAhead().value().type == TokenTypes::let &&
+            lookAhead(1).has_value() && lookAhead(1).value().type == TokenTypes::ident &&
+            lookAhead(2).has_value() && lookAhead(2).value().type == TokenTypes::eq)
         {
             // let statement, consume it
             getNextToken();
@@ -293,7 +362,7 @@ public:
             // equal sign, consume it
             getNextToken();
             // and then we have z expr
-            if (auto expr = parseExpr())
+            if (const auto expr = parseExpr())
             {
                 statementLet->expr = expr.value();
             }
@@ -307,7 +376,7 @@ public:
             statement->variant = statementLet;
             return statement;
         }
-        else if (lookAhead().has_value() && lookAhead().value().type == TokenTypes::open_curly)
+        if (lookAhead().has_value() && lookAhead().value().type == TokenTypes::open_curly)
         {
             if (auto scope = parseScope())
             {
@@ -315,17 +384,14 @@ public:
                 statement->variant = scope.value();
                 return statement;
             }
-            else
-            {
-                std::cerr << "Error : Invalid Scope" << std::endl;
-                exit(EXIT_FAILURE);
-            }
+            std::cerr << "Error : Invalid Scope" << std::endl;
+            exit(EXIT_FAILURE);
         }
-        else if (auto _if = trytoGetNextToken(TokenTypes::_if))
+        if (auto _if = trytoGetNextToken(TokenTypes::_if))
         {
             trytoGetNextToken(TokenTypes::open_parenthesis, "Error : Expected '('");
             auto statementIf = m_ArenaAllocator.allocate<node::StatementIf>();
-            if (auto expr = parseExpr())
+            if (const auto expr = parseExpr())
             {
                 statementIf->expr = expr.value();
             }
@@ -336,7 +402,7 @@ public:
             }
 
             trytoGetNextToken(TokenTypes::close_parenthesis, "Error : Expected ')'");
-            if (auto scope = parseScope())
+            if (const auto scope = parseScope())
             {
                 statementIf->scope = scope.value();
             }
@@ -345,14 +411,12 @@ public:
                 std::cerr << "Error : Invalid Scope" << std::endl;
                 exit(EXIT_FAILURE);
             }
+            statementIf->conditionalBr = parseConditionalBr();
             auto statement = m_ArenaAllocator.allocate<node::Statement>();
             statement->variant = statementIf;
             return statement;
         }
-        else
-        {
-            return {};
-        }
+        return {};
     }
 
     std::optional<node::Prog> parseProg()
