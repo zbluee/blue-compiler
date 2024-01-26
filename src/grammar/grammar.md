@@ -10,6 +10,7 @@
   - `Term`
   - `Exprs`
   - `Scope`
+  - `ConditionalBranch`
 
 - **Terminals (\( T \)):**
   - `0, 1, 2, ..., 9`
@@ -27,6 +28,8 @@
   - `{`
   - `}`
   - `if`
+  - `elif`
+  - `else`
 
 - **Start Symbol (S):** 
     - `Prog`
@@ -36,9 +39,11 @@
   ```
   <Prog> ⟶ <Statement> | <Prog> <Statement>
   
-  <Statement> ⟶  exit(<Expr>); | <let> <Ident> = <Expr> | <Scope> | if(<Expr>)<Scope>
+  <Statement> ⟶  exit(<Expr>); | <let> <Ident> = <Expr> | <Scope> | if(<Expr>)<Scope><ConditionalBranch>
 
   <Scope> ⟶ <Statement> | <Scope> <Statement>
+
+  <ConditionalBranch> ⟶ elif(<Expr>)<Scope><ConditionalBranch> | else<Scope> | λ
 
   <Ident> ⟶  <letter> | <Ident> <letter> | <Ident> <Int_literals>
 
