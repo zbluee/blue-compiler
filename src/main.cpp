@@ -38,15 +38,14 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    CodeGenerator generator(prog.value());
-
     {
+        CodeGenerator generator(prog.value());
         std::ofstream write("../out.asm");
         write << generator.genProg();
     }
 
-    system("nasm -felf64 out.asm");
-    system("ld -o out out.o");
+    system("cd ../ && nasm -felf64 out.asm");
+    system("cd ../ && ld -o out out.o");
 
     return EXIT_SUCCESS;
 }
