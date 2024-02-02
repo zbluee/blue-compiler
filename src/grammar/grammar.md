@@ -1,4 +1,4 @@
-####Grammar \( G = (N, T, P, S) \) is defined as follows:
+#### Grammar \( G = (N, T, P, S) \) is defined as follows:
 
 - **Non-terminals (\( N \)):**
   - `Prog`
@@ -39,7 +39,7 @@
   ```
   <Prog> ⟶ <Statement> | <Prog> <Statement>
   
-  <Statement> ⟶  exit(<Expr>); | <let> <Ident> = <Expr> | <Scope> | if(<Expr>)<Scope><ConditionalBranch>
+  <Statement> ⟶  exit(<Expr>); | <let> <Ident> = <Expr> | <Ident> = <Expr> | <Scope> | if(<Expr>)<Scope><ConditionalBranch>
 
   <Scope> ⟶ <Statement> | <Scope> <Statement>
 
