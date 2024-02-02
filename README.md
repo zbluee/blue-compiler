@@ -1,4 +1,4 @@
-#Blue, simple programming language[C++ compiler.]
+# Blue, simple programming language[C++ compiler.]
 
 Welcome to the Blue programming language compiler repository. This project serves as a learning resource to understand the fundamentals of how compilers work, using the Blue language as an example. Blue is a simple programming language designed for my own learning experience.
 
