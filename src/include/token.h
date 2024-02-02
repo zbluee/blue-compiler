@@ -28,4 +28,5 @@ struct Token
     /* data */
     TokenTypes type;
     std::optional<std::string> value{};
+    int line;
 };
