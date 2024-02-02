@@ -1,20 +1,19 @@
 let num1 = (17 - 1 * 1 / 1) / 2;
---comment
-if(num1 * 0 ){
-    exit (num1*0);
-}
-elif(num1 * 0 -# * 0 #-)
-{
-    exit(num1 * 4);
-}else{
-    exit(90);
-}
-
 let num2 = num1 / 4 / 2;
 
+--first comment
+if(num1 * 0){
+    num1 = num1  + num2;
+}elif(num2)
+{
+    num1 = num1  * num2;
+}else{
+    num1 = 0;
+}
+
 -#  
---second comment
+--single line comment, in mutli-line comment
 exit (num2);
 #-
 
-exit (num2);
+exit (num1);
