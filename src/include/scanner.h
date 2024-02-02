@@ -40,6 +40,7 @@ public:
     {
         std::vector<Token> tokens;
         std::string buf;
+        int countLine = 1;
 
         while (lookAhead().has_value())
         {
@@ -54,32 +55,32 @@ public:
 
                 if (buf == "exit")
                 {
-                    tokens.push_back({.type = TokenTypes::exit});
+                    tokens.push_back({.type = TokenTypes::exit, .line = countLine});
                     buf.clear();
                 }
                 else if (buf == "let")
                 {
-                    tokens.push_back({.type = TokenTypes::let});
+                    tokens.push_back({.type = TokenTypes::let, .line = countLine});
                     buf.clear();
                 }
                 else if (buf == "if")
                 {
-                    tokens.push_back({.type = TokenTypes::_if});
+                    tokens.push_back({.type = TokenTypes::_if, .line = countLine});
                     buf.clear();
                 }
                 else if (buf == "elif")
                 {
-                    tokens.push_back({.type = TokenTypes::elif});
+                    tokens.push_back({.type = TokenTypes::elif, .line = countLine});
                     buf.clear();
                 }
                 else if (buf == "else")
                 {
-                    tokens.push_back({.type = TokenTypes::_else});
+                    tokens.push_back({.type = TokenTypes::_else, .line = countLine});
                     buf.clear();
                 }
                 else
                 {
-                    tokens.push_back({.type = TokenTypes::ident, .value = buf});
+                    tokens.push_back({.type = TokenTypes::ident, .value = buf, .line = countLine});
                     buf.clear();
                 }
             }
@@ -91,7 +92,7 @@ public:
                     buf.push_back(getNextChar());
                 }
 
-                tokens.push_back({.type = TokenTypes::int_literals, .value = buf});
+                tokens.push_back({.type = TokenTypes::int_literals, .value = buf, .line = countLine});
                 buf.clear();
             }
             else if (lookAhead().value() == '-' && lookAhead(1).has_value() && lookAhead(1).value() == '-')
@@ -121,52 +122,56 @@ public:
             else if (lookAhead().value() == '(')
             {
                 getNextChar();
-                tokens.push_back({.type = TokenTypes::open_parenthesis});
+                tokens.push_back({.type = TokenTypes::open_parenthesis, .line = countLine});
             }
             else if (lookAhead().value() == ')')
             {
                 getNextChar();
-                tokens.push_back({.type = TokenTypes::close_parenthesis});
+                tokens.push_back({.type = TokenTypes::close_parenthesis, .line = countLine});
             }
             else if (lookAhead().value() == ';')
             {
                 getNextChar();
-                tokens.push_back({.type = TokenTypes::semicolon});
+                tokens.push_back({.type = TokenTypes::semicolon, .line = countLine});
             }
             else if (lookAhead().value() == '=')
             {
                 getNextChar();
-                tokens.push_back({.type = TokenTypes::eq});
+                tokens.push_back({.type = TokenTypes::eq, .line = countLine});
             }
             else if (lookAhead().value() == '+')
             {
                 getNextChar();
-                tokens.push_back({.type = TokenTypes::plus});
+                tokens.push_back({.type = TokenTypes::plus, .line = countLine});
             }
             else if (lookAhead().value() == '*')
             {
                 getNextChar();
-                tokens.push_back({.type = TokenTypes::mul});
+                tokens.push_back({.type = TokenTypes::mul, .line = countLine});
             }
             else if (lookAhead().value() == '-')
             {
                 getNextChar();
-                tokens.push_back({.type = TokenTypes::sub});
+                tokens.push_back({.type = TokenTypes::sub, .line = countLine});
             }
             else if (lookAhead().value() == '/')
             {
                 getNextChar();
-                tokens.push_back({.type = TokenTypes::div});
+                tokens.push_back({.type = TokenTypes::div, .line = countLine});
             }
             else if (lookAhead().value() == '{')
             {
                 getNextChar();
-                tokens.push_back({.type = TokenTypes::open_curly});
+                tokens.push_back({.type = TokenTypes::open_curly, .line = countLine});
             }
             else if (lookAhead().value() == '}')
             {
                 getNextChar();
-                tokens.push_back({.type = TokenTypes::close_curly});
+                tokens.push_back({.type = TokenTypes::close_curly, .line = countLine});
+            }
+            else if (lookAhead().value() == '\n'){
+                getNextChar();
+                countLine ++;
             }
             else if (std::isspace(lookAhead().value()))
             {
