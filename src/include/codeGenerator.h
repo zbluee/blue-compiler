@@ -1,6 +1,7 @@
 #pragma once
 #include "./parser.h"
 #include <map>
+#include <algorithm>
 
 class CodeGenerator
 {
@@ -70,8 +71,7 @@ public:
             }
             void operator()(const node::TermIdent *termIdent) const
             {
-                const auto itr = std::find_if(generator.m_Variables.cbegin(), generator.m_Variables.cend(), [&](const Variable &var)
-                                              { return var.name == termIdent->ident.value.value(); });
+                const auto itr = std::ranges::find_if(generator.m_Variables, [&](const Variable& var){return var.name == termIdent->ident.value.value();});
                 // extracting out the value of the varialbe and we need to put copy of it on top of the stack
                 // first check if the variable is declared
                 if (itr == generator.m_Variables.cend())
@@ -223,10 +223,9 @@ public:
             }
             void operator()(const node::StatementLet *statementLet) const
             {
-                const auto it = std::find_if(generator.m_Variables.cbegin(), generator.m_Variables.cend(), [&](const Variable &var)
-                                             { return var.name == statementLet->ident.value.value(); });
+                const auto itr = std::ranges::find_if(generator.m_Variables, [&](const Variable& var){return var.name == statementLet->ident.value.value();});
                 // encounter with let statement, first need to check to make sure that there is not a variable declared with that name
-                if (it != generator.m_Variables.cend())
+                if (itr != generator.m_Variables.cend())
                 {
                     std::cerr << "Error :  Redeclaration of variable : " << statementLet->ident.value.value() << std::endl;
                     exit(EXIT_FAILURE);
@@ -248,16 +247,38 @@ public:
                 generator.pop("rax");                 // pop back in to the rax, if it's 0 jump, else go to the label
                 const std::string label = generator.createLabel();
                 generator.m_Output << "    TEST rax, rax\n";
-                generator.m_Output << "    JZ " << label << "\n";
+                generator.m_Output << "    JZ " << label << "\n"; // jamp the scope, if it's zero
                 generator.genScope(statementIf->scope);
-                generator.m_Output << label << ":\n";
-
                 if (statementIf->conditionalBr.has_value())
                 {
                     const std::string endLabel = generator.createLabel();
+                    generator.m_Output << "    JMP " << endLabel << "\n";
+                    generator.m_Output << label << ":\n";
                     generator.genConditionalBr(statementIf->conditionalBr.value(), endLabel);
                     generator.m_Output << endLabel << ":\n";
                 }
+                else
+                {
+                    generator.m_Output << label << ":\n";
+                }
+                generator.m_Output << "    ;;/if\n";
+            }
+
+            void operator()(const node::StatementAssignment *statementAssign) const
+            {
+                // in order to assing a variable, first check if it exist in the Variable vector
+                const auto itr = std::ranges::find_if(generator.m_Variables, [&](const Variable &var)
+                                                      { return var.name == statementAssign->ident.value.value(); });
+                if (itr == generator.m_Variables.end())
+                {
+                    std::cerr << "Error : Undeclared Identifier" << statementAssign->ident.value.value() << std::endl;
+                    exit(EXIT_FAILURE);
+                }
+
+                // not checking for type, everything is int for now
+                generator.genExpr(statementAssign->expr);
+                generator.pop("rax"); // put the result of the above expr to the rax
+                generator.m_Output << "    MOV[rsp + " << (generator.m_StackPtr - itr->stackPtr - 1) * 8 << "], rax\n";
             }
         };
 
